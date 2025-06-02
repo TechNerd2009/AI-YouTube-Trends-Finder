@@ -1,0 +1,195 @@
+{
+  "name": "AI YouTube Trends Finder Based on Niche",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.query.chatInput }}",
+        "options": {
+          "systemMessage": "=You help youtube creators find trending videos based on a specific niche.\n\nVerify if the user informed a niche before doing anything. If not, choose the YouTube niche closest to what the user told you.\n\nAfter you know what type of content the user might produce, use the \"youtube_search\" tool up to 3 times with different search terms based on the user's content type and niche.\n\nThe tool will answer with a list of videos from the last 2 days that had the most amount of relevancy. It returns a list of json's covering each video's id, view count, like count, comment count, description, channel title, tags and channel id. Each video is separated by \"### NEXT VIDEO FOUND: ###\".\n\nYou should then proceed to understand the data received then provide the user with insightful data of what could be trending from the past 2 days. Provide the user links to the trending videos which should be in this structure:\n\nhttps://www.youtube.com/watch?v={video_id}\n\nto reach the channel's link you should use:\n\nhttps://www.youtube.com/channel/{channel_id}\n\nFind patterns in the tags, titles and especially in the related content for the videos found.\n\nYour mission isn't to find the trending videos. It's to provide the user with valuable information of what is trending in that niche in terms of content news. Remember to provide the user with the numbers of views, likes and comments while commenting about any video. So you should not talk about any particular video, focus rather in explaining the overall senario of all that was found.\n\nExample of response:\n\n\"It seems like what is trending in digital marketing right now is talking about mental triggers, since 3 of the most trending videos in the last 2 days were about...\""
+        }
+      },
+      "id": "0ced3bb4-0816-4baf-bc79-6b57995bba43",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        300,
+        80
+      ],
+      "typeVersion": 1.6
+    },
+    {
+      "parameters": {
+        "name": "youtube_search",
+        "description": "Call this tool to search for trending videos based on a query.",
+        "workflowId": {
+          "__rl": true,
+          "value": "jGLfjYy64mtDQD9l",
+          "mode": "list",
+          "cachedResultName": "YouTube Search Workflow (Tool)"
+        },
+        "specifyInputSchema": true,
+        "jsonSchemaExample": "{\n\t\"search_term\": \"some_value\"\n}"
+      },
+      "id": "039264f9-1fba-43be-a881-824b9f07049d",
+      "name": "youtube_search",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "position": [
+        560,
+        300
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "content": "Main Workflow",
+        "height": 435,
+        "width": 893,
+        "color": 7
+      },
+      "id": "1b7c3bf0-2ff2-45f2-817a-d72606e20988",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        0,
+        0
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "youtube_trends_finder",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        40,
+        80
+      ],
+      "id": "8a5eca8a-176c-4fa5-b979-e62f6f7e1c79",
+      "name": "Webhook",
+      "webhookId": "149c3b3c-efa0-4ea1-bd2e-789b22572fa5"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        700,
+        80
+      ],
+      "id": "40bcc9a4-e71d-470c-8cd7-26bd4846200a",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4.1-mini",
+        "options": {}
+      },
+      "id": "8c4b5b50-e24e-43fb-9739-ea5d7adcf3ab",
+      "name": "openai_llm",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        200,
+        300
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "openAiApi": {
+          "id": "h0b3Ue3nsZH03pkw",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $workflow.id }}"
+      },
+      "id": "d776fdba-6a80-40ec-a44b-813e4c4a4896",
+      "name": "window_buffer_memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        380,
+        300
+      ],
+      "typeVersion": 1.2
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "youtube_search": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "openai_llm": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "window_buffer_memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "29479eff-a1d9-4df5-a6dc-213fe1de9281",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0335bc35b58a1e85413a266ecc5b645066f82dfafb95a7780259ef51cf124ea4"
+  },
+  "id": "FWhZdLwscVXBWrz0",
+  "tags": []
+}

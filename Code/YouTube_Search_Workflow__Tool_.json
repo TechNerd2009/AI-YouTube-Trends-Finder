@@ -1,0 +1,429 @@
+{
+  "name": "YouTube Search Workflow (Tool)",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/videos?",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "={{ $('Google Cloud Youtube Data API Key').item.json.GOOGLE_API_KEY }}"
+            },
+            {
+              "name": "id",
+              "value": "={{ $('get_videos1').item.json.id.videoId }}"
+            },
+            {
+              "name": "part",
+              "value": "contentDetails, snippet, statistics"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1344777d-32ca-4ce5-b291-7a469d64429a",
+      "name": "find_video_data1",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        780,
+        240
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "limit": 3,
+        "filters": {
+          "publishedAfter": "={{ new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() }}",
+          "q": "={{ $json.query.search_term }}",
+          "regionCode": "US"
+        },
+        "options": {
+          "order": "relevance",
+          "safeSearch": "moderate"
+        }
+      },
+      "id": "cd953e83-e706-4cfa-b675-5588c1e05a54",
+      "name": "get_videos1",
+      "type": "n8n-nodes-base.youTube",
+      "position": [
+        180,
+        80
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "TJSxdX5bXc1lrobj",
+          "name": "YouTube account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b9b9117b-ea14-482e-a13b-e68b8e6b441d",
+              "name": "response",
+              "type": "string",
+              "value": "={{ $input.all() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6534dcc9-5b0b-4e79-90ed-ed79c4de6713",
+      "name": "response1",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1180,
+        20
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "47c172ad-90c8-4cf6-a9f5-50607e04cc90",
+              "name": "id",
+              "type": "string",
+              "value": "={{ $json.items[0].id }}"
+            },
+            {
+              "id": "9e639efa-0714-4b06-9847-f7b4b2fbef59",
+              "name": "viewCount",
+              "type": "string",
+              "value": "={{ $json.items[0].statistics.viewCount }}"
+            },
+            {
+              "id": "93328f00-91b8-425b-ad0f-a330b2f95242",
+              "name": "likeCount",
+              "type": "string",
+              "value": "={{ $json.items[0].statistics.likeCount }}"
+            },
+            {
+              "id": "015b0fb2-2a98-464c-a21b-51100616f26a",
+              "name": "commentCount",
+              "type": "string",
+              "value": "={{ $json.items[0].statistics.commentCount }}"
+            },
+            {
+              "id": "cf1e1ec3-a138-42b8-8747-d249afa58dd3",
+              "name": "description",
+              "type": "string",
+              "value": "={{ $json.items[0].snippet.description }}"
+            },
+            {
+              "id": "c5c9a3a2-b820-4932-a38a-e21102992215",
+              "name": "title",
+              "type": "string",
+              "value": "={{ $json.items[0].snippet.title }}"
+            },
+            {
+              "id": "38216ead-1f8d-4f93-b6ad-5ef709a1ad2a",
+              "name": "channelTitle",
+              "type": "string",
+              "value": "={{ $json.items[0].snippet.channelTitle }}"
+            },
+            {
+              "id": "ff34194d-3d46-43a8-9127-84708987f536",
+              "name": "tags",
+              "type": "string",
+              "value": "={{ $json.items[0].snippet.tags.join(', ') }}"
+            },
+            {
+              "id": "e50b0f7b-3e37-4557-8863-d68d4fa505c8",
+              "name": "channelId",
+              "type": "string",
+              "value": "={{ $json.items[0].snippet.channelId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "be530e6e-8b0c-452f-9908-f159e8947267",
+      "name": "group_data1",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1240,
+        220
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const workflowStaticData = $getWorkflowStaticData('global');\n\nif (typeof workflowStaticData.lastExecution !== 'object') {\n workflowStaticData.lastExecution = {\n response: \"\"\n };\n}\n\nfunction removeEmojis(text) {\n return text.replace(/[\\u{1F600}-\\u{1F64F}|\\u{1F300}-\\u{1F5FF}|\\u{1F680}-\\u{1F6FF}|\\u{2600}-\\u{26FF}|\\u{2700}-\\u{27BF}]/gu, '');\n}\n\nfunction cleanDescription(description) {\n return description\n .replace(/https?:\\/\\/\\S+/g, '')\n .replace(/www\\.\\S+/g, '')\n .replace(/ +/g, ' ')\n .trim();\n}\n\nconst currentItem = { ...$input.item };\n\nif (currentItem.description) {\n currentItem.description = cleanDescription(currentItem.description);\n}\n\nlet sanitizedItem = JSON.stringify(currentItem)\n .replace(/\\\\r/g, ' ')\n .replace(/https?:\\/\\/\\S+/g, '')\n .replace(/www\\.\\S+/g, '')\n .replace(/\\\\n/g, ' ')\n .replace(/\\n/g, ' ')\n .replace(/\\\\/g, '')\n .replace(/ +/g, ' ')\n .trim();\n\nif (workflowStaticData.lastExecution.response) {\n workflowStaticData.lastExecution.response += ' ### NEXT VIDEO FOUND: ### ';\n}\n\nworkflowStaticData.lastExecution.response += removeEmojis(sanitizedItem);\n\nreturn workflowStaticData.lastExecution;\n"
+      },
+      "id": "5215633a-1b59-4622-83c3-55cbbc25432c",
+      "name": "save_data_to_memory1",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1440,
+        400
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const workflowStaticData = $getWorkflowStaticData('global');\n\nconst lastExecution = workflowStaticData.lastExecution;\n\nreturn lastExecution;"
+      },
+      "id": "f55a0011-39cb-46a2-a6f3-a5f195a711c6",
+      "name": "retrieve_data_from_memory1",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        860,
+        20
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "78e6c262-17f3-40b4-a7a3-fe73e4c4a0cc",
+      "name": "loop_over_items1",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [
+        580,
+        80
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "08ba3db9-6bcf-47f8-a74d-9e26f28cb08f",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "leftValue": "={{ \n (() => {\n const duration = $json.items[0].contentDetails.duration;\n\n // Helper function to convert ISO 8601 duration to seconds\n const iso8601ToSeconds = iso8601 => {\n const match = iso8601.match(/PT(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?/);\n const hours = parseInt(match[1] || 0, 10);\n const minutes = parseInt(match[2] || 0, 10);\n const seconds = parseInt(match[3] || 0, 10);\n return hours * 3600 + minutes * 60 + seconds;\n };\n\n // Convert duration to seconds\n const durationInSeconds = iso8601ToSeconds(duration);\n\n // Check if greater than 210 seconds (3 minutes 30 seconds)\n return durationInSeconds > 210;\n })() \n}}",
+              "rightValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dd943ab8-ce19-4cef-a2f9-183c2d48a43f",
+      "name": "if_longer_than_3_",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        960,
+        240
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        40,
+        80
+      ],
+      "id": "55209aad-f714-474c-ac31-9e727e842549",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "content": "### ADD GOOGLE CLOUD YOUTUBE DATA API KEY HERE",
+        "height": 260,
+        "width": 210
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        300,
+        20
+      ],
+      "typeVersion": 1,
+      "id": "d7496a64-6901-4cfb-964f-a0e33f09d056",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "YouTube Search Tool",
+        "height": 600,
+        "width": 1600,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        0,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "839f9704-4eca-4c83-933d-999ca24952df",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cd43a743-610f-494a-85e4-e24ac61c6f5f",
+              "name": "GOOGLE_API_KEY",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        360,
+        100
+      ],
+      "id": "a61e90e1-42dd-4022-a819-4fca2604312e",
+      "name": "Google Cloud Youtube Data API Key",
+      "notesInFlow": true,
+      "notes": "ADD GOOGLE API KEY"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "get_videos1": {
+      "main": [
+        [
+          {
+            "node": "Google Cloud Youtube Data API Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "group_data1": {
+      "main": [
+        [
+          {
+            "node": "save_data_to_memory1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "find_video_data1": {
+      "main": [
+        [
+          {
+            "node": "if_longer_than_3_",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "loop_over_items1": {
+      "main": [
+        [
+          {
+            "node": "retrieve_data_from_memory1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "find_video_data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_longer_than_3_": {
+      "main": [
+        [
+          {
+            "node": "group_data1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "save_data_to_memory1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "save_data_to_memory1": {
+      "main": [
+        [
+          {
+            "node": "loop_over_items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "retrieve_data_from_memory1": {
+      "main": [
+        [
+          {
+            "node": "response1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "get_videos1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Cloud Youtube Data API Key": {
+      "main": [
+        [
+          {
+            "node": "loop_over_items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "aa7b4f10-92be-4f89-8b20-44463878e70e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0335bc35b58a1e85413a266ecc5b645066f82dfafb95a7780259ef51cf124ea4"
+  },
+  "id": "jGLfjYy64mtDQD9l",
+  "tags": []
+}

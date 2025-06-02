@@ -1,0 +1,5 @@
+# Ignore macOS system files
+.DS_Store
+Code/.DS_Store
+Example/.DS_Store
+Workflows/.DS_Store
